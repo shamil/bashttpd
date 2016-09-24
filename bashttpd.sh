@@ -1,3 +1,8 @@
+#!/bin/bash
+#
+# bashttpd.sh - a shell web server 
+#
+
 # enable debug
 [ "${DEBUG:-0}" -gt 0 ] && set -x
 
@@ -55,7 +60,7 @@ function send_response() {
     }
 
     # start listening
-    echo "Starting server, listening on ${PORT:=8080} press CTRL-C to exit..."
+    echo "Starting server, listening on ${PORT:=8080}, press CTRL-C to exit..."
     socat TCP-LISTEN:$PORT,crlf,reuseaddr,fork SYSTEM:"RH=1 DEBUG=$DEBUG source $0; send_response"
 }
 
