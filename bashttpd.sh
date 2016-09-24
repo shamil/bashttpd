@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# bashttpd.sh - a shell web server 
+# bashttpd.sh - a shell web server
 #
 
 # enable debug
@@ -20,34 +20,42 @@ function code_to_text() {
     esac
 }
 
+function url_decode() {
+   echo "$1" | awk -niord '{printf RT?$0chr("0x"substr(RT,2)):$0}' RS=%..
+}
+
 function set_headers() {
    local code=$1
-   local content_type=${2:-application/octet-stream}
+   local content_type=${2:-text/plain}
    echo -en "HTTP/1.0 $1 $(code_to_text $1)\n"
    echo -en "Content-Type: $content_type\n\n"
 }
 
 function abort_request() {
-   set_headers ${1:-500}; shift 
+   set_headers ${1:-500}; shift
    [ -n "$*" ] && echo $*
    exit
 }
 
 function send_response() {
-   read -t 1 line || abort_request 400
-   echo "[$(date +'%F %T')] $line" >&2
+   read -t 1 request || abort_request 400
+   echo "[$(date +'%F %T')] $request" >&2
 
-   set $line
-   local method=$1 path=".${2%/}"
-   grep -iq GET <<<"$method" || abort_request 405 $method: method not allowed
+   set $request
+   local method=$1 path="$(url_decode ".${2%/}")"
+
+   # we support only GET
+   grep -iq GET <<< $method || abort_request 405 $method: method not allowed
+
 
    # check that requested path exists
-   [ -e "$path" ] || {
-      abort_request 404 404: $path not found
-   }
+   [ -e "$path" ] || abort_request 404 404: $path not found
 
+   # send file
    [ -f "$path" ] && { set_headers 200 $(file -b --mime-type "$path"); cat "$path"; }
-   [ -d "$path" ] && { set_headers 200 text/plain; ls --group-directories-first -lh "$path"; }
+
+   # send directory index
+   [ -d "$path" ] && { set_headers 200; ls --group-directories-first -lh "$path"; }
 }
 
 
@@ -61,6 +69,6 @@ function send_response() {
 
     # start listening
     echo "Starting server, listening on ${PORT:=8080}, press CTRL-C to exit..."
-    socat TCP-LISTEN:$PORT,crlf,reuseaddr,fork SYSTEM:"RH=1 DEBUG=$DEBUG source $0; send_response"
+    socat TCP-LISTEN:$PORT,reuseaddr,fork SYSTEM:"RH=1 DEBUG=$DEBUG source $0; send_response"
 }
 
