@@ -32,8 +32,8 @@ function set_headers() {
 }
 
 function abort_request() {
-   set_headers ${1:-500}; shift
-   [ -n "$*" ] && echo $*
+   set_headers ${1:-500}
+   [ -n "$2" ] && echo "$2" || code_to_text $1
    exit
 }
 
@@ -45,17 +45,16 @@ function send_response() {
    local method=$1 path="$(url_decode ".${2%/}")"
 
    # we support only GET
-   grep -iq GET <<< $method || abort_request 405 $method: method not allowed
-
+   grep -iq GET <<< $method || abort_request 405
 
    # check that requested path exists
-   [ -e "$path" ] || abort_request 404 404: $path not found
+   [ -e "$path" ] || abort_request 404
 
    # send file
-   [ -f "$path" ] && { set_headers 200 $(file -b --mime-type "$path"); cat "$path"; }
+   [ -f "$path" ] && { set_headers 200 "$(file -b --mime "$path")"; cat "$path"; }
 
    # send directory index
-   [ -d "$path" ] && { set_headers 200; ls --group-directories-first -lh "$path"; }
+   [ -d "$path" ] && { set_headers 200 "text/plain; charset=utf-8"; ls --group-directories-first -lh "$path"; }
 }
 
 
