@@ -22,7 +22,7 @@ function code_to_text() {
 
 function set_headers() {
    local code=$1
-   local content_type=${2:-text/plain}
+   local content_type=${2:-application/octet-stream}
    echo -en "HTTP/1.0 $1 $(code_to_text $1)\n"
    echo -en "Content-Type: $content_type\n\n"
 }
@@ -46,8 +46,8 @@ function send_response() {
       abort_request 404 404: $path not found
    }
 
-   [ -f "$path" ] && { set_headers 200 application/octet-stream; cat "$path"; }
-   [ -d "$path" ] && { set_headers 200; ls --group-directories-first -lh "$path"; }
+   [ -f "$path" ] && { set_headers 200 $(file -b --mime-type "$path"); cat "$path"; }
+   [ -d "$path" ] && { set_headers 200 text/plain; ls --group-directories-first -lh "$path"; }
 }
 
 
