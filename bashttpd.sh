@@ -51,7 +51,7 @@ function send_response() {
    [ -e "$path" ] || abort_request 404
 
    # send file
-   [ -f "$path" ] && { set_headers 200 "$(file -b --mime "$path")"; cat "$path"; }
+   [ -f "$path" ] && { set_headers 200 "$(file -b --mime "$path")"; cat "$path"; return; }
 
    # send directory index
    [ -d "$path" ] && { set_headers 200 "text/plain; charset=utf-8"; ls --group-directories-first -lh "$path"; }
