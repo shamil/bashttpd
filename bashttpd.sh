@@ -57,17 +57,18 @@ function send_response() {
    [ -d "$path" ] && { set_headers 200 "text/plain; charset=utf-8"; ls --group-directories-first -lh "$path"; }
 }
 
-
-# start the server
-[ ${RH:-0} -lt 1 ] && {
-    # check for socat
-    which socat >/dev/null 2>&1 || {
-       echo "socat is required, please install it first"
-       exit 1
-    }
-
-    # start listening
-    echo "Starting server, listening on ${PORT:=8080}, press CTRL-C to exit..."
-    socat TCP-LISTEN:$PORT,reuseaddr,fork SYSTEM:"RH=1 DEBUG=$DEBUG source $0; send_response"
+# handle request and exit
+[ ${RH:-0} -gt 0 ] && {
+   send_response
+   exit
 }
 
+# start the server
+type -P socat &>/dev/null || {
+    echo "socat is required, please install it first"
+    exit 1
+}
+
+# start listening
+echo "Starting server, listening on ${PORT:=8080}, press CTRL-C to exit..."
+socat TCP-LISTEN:$PORT,reuseaddr,fork SYSTEM:"RH=1 DEBUG=$DEBUG /usr/bin/env bash $0"
