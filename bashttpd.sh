@@ -38,7 +38,8 @@ function set_headers() {
 
 function abort_request() {
    set_headers ${1:-500}
-   [ -n "$2" ] && echo "$2" || code_to_text $1
+   [ -n "$2" ] && echo -n "$2" || code_to_text $1
+   echo
    exit
 }
 
@@ -54,6 +55,9 @@ function send_response() {
 
    # check that requested path exists
    [ -e "$path" ] || abort_request 404
+
+   # serve index.html if exists
+   [[ "$path" = "." && -e "index.html" ]] && path=./index.html
 
    # send file
    [ -f "$path" ] && { set_headers 200 "$(file -b --mime "$path")"; cat "$path"; return; }
