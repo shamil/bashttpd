@@ -3,6 +3,11 @@
 # bashttpd.sh - a shell web server
 #
 
+# defaults
+: ${PORT:=8080}
+: ${READ_TIMEOUT:=1}
+: ${ROOT:=$PWD}
+
 # enable debug
 [ "${DEBUG:-0}" -gt 0 ] && set -x
 
@@ -27,7 +32,7 @@ function url_decode() {
 function set_headers() {
    local code=$1
    local content_type=${2:-text/plain}
-   echo -en "HTTP/1.0 $1 $(code_to_text $1)\n"
+   echo -en "HTTP/1.0 $code $(code_to_text $code)\n"
    echo -en "Content-Type: $content_type\n\n"
 }
 
@@ -38,7 +43,7 @@ function abort_request() {
 }
 
 function send_response() {
-   read -t 1 request || abort_request 400
+   read -rt $READ_TIMEOUT request || abort_request 400
    echo "[$(date +'%F %T')] $request" >&2
 
    set $request
@@ -59,16 +64,22 @@ function send_response() {
 
 # handle request and exit
 [ ${RH:-0} -gt 0 ] && {
+   cd "$ROOT"
    send_response
    exit
 }
 
 # start the server
 type -P socat &>/dev/null || {
-    echo "socat is required, please install it first"
-    exit 1
+   echo "socat is required, please install it first" >&2
+   exit 1
+}
+
+[[ -d "$ROOT" && -r "$ROOT" ]] || {
+   echo "directory '$ROOT' specified by ROOT variable doesn't exist or in-accessible" >&2
+   exit 1
 }
 
 # start listening
-echo "Starting server, listening on ${PORT:=8080}, press CTRL-C to exit..."
+echo "Starting server, listening on $PORT, press CTRL-C to exit..."
 socat TCP-LISTEN:$PORT,reuseaddr,fork SYSTEM:"RH=1 DEBUG=$DEBUG /usr/bin/env bash $0"
